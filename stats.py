@@ -3,8 +3,8 @@
 import pandas as pd
 
 def wiki_tables(dictionary, header, title='Attribute name'):
-    output = '{{|\n|{0}\n|'.format(title)
-    output += '\n|'.join(header)
+    output = '{{|border="1"\n!{0}\n!'.format(title)
+    output += '\n!'.join(header)
     for attr in sorted(dictionary):
         output += '\n|-\n|{0}'.format(attr)
         for field in header:
@@ -27,19 +27,19 @@ def main():
 
     header = ['min', 'max', 'mean', 'std', 'count']
 
-    print('====Emotions====')
+    print('===Emotions===')
     emotions_dict = emotions[['emotion']].describe().to_dict()
     emotions_dict['emotion']['count (incl. null values)'] = len(emotions)
     print(wiki_tables(emotions_dict, header+['count (incl. null values)']))
 
-    print('====Landmarks====')
+    print('===Landmarks===')
     print(wiki_tables(landmarks[['x', 'y']].describe().to_dict(), header))
 
-    print('====FACS====')
-    print("Summary")
+    print('===FACS===')
+    print("====Summary====")
     print(wiki_tables(facs[['au', 'intensity']].describe().to_dict(), header))
 
-    print("Details for each AU")
+    print("====Details for each AU====")
     grouped_facs = facs.groupby(['au'])['intensity'].describe().to_dict()
     facs_dict = {}
     for au, field in grouped_facs:
