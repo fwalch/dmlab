@@ -89,8 +89,8 @@ def main():
             flat_data['emotions'].append({'emotion': emotion, 'subject': subject, 'image_sequence': image_sequence})
 
             landmarks = read_peak_landmarks(subject, image_sequence)
-            for x, y in landmarks:
-                flat_data['landmarks'].append({'subject': subject, 'image_sequence': image_sequence, 'x': x, 'y': y})
+            for i, (x, y) in enumerate(landmarks):
+                flat_data['landmarks'].append({'subject': subject, 'image_sequence': image_sequence, 'number': i, 'x': x, 'y': y})
 
 
     with open(os.path.join(DATA_DIR, 'data.json'), 'w') as outfile:
