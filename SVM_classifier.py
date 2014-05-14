@@ -13,10 +13,12 @@ def classifier(X, Y):
     """
 
     #SVM classifier
-    clf = SVC(probability=True)
+    clf = SVC(kernel='linear', C=1)
 
     #Stratified folds: each set contains the same percentage of samples of each target class as the complete set.
-    cv = cross_validation.StratifiedKFold(Y, n_folds=4)
+    cv = cross_validation.StratifiedKFold(Y, n_folds=7)
+
+
 
     #predict(): Predict target values of X given a model (low-level method)
     #predict_proba(): Predict probabilities
@@ -24,8 +26,21 @@ def classifier(X, Y):
     confusionadd = np.zeros((7,7))
     Ytest_a, pred_a = [], []
 
+    '''
 
+    X_train, X_test, y_train, y_test = cross_validation.train_test_split( X, Y, test_size=0.4, random_state=0)
+
+    clfSVM= clf.fit(X_train, y_train)
+
+    pred = clfSVM.predict(X_test)
+
+    confusion = metrics.confusion_matrix(y_test, pred, labels=None)
+
+    print clfSVM.score(X_test, y_test)
+
+    print confusion '''
     #Cross Validation 7-fold
+    
     for traincv, testcv in cv:
 
 
@@ -45,12 +60,14 @@ def classifier(X, Y):
         Ytest_a.extend(Y[testcv])
         pred_a.extend(pred)
 
+
     scoreAVG = np.array(scoreAVG)
     report = metrics.classification_report(Ytest_a, pred_a, labels = [1,2,3,4,5,6,7], target_names=['Anger', 'Contempt', 'Disgust', 'Fear', 'Happy','Sadness','Surprise'])
 
     print("AVG accuracy-score:   %0.3f, %.3f, %.3f\n" % (scoreAVG.mean(), scoreAVG.std(), np.median(scoreAVG)))
     print("AVG confusion-matrix:\n%s\n" % confusionadd)
     print("AVG report\n%s" %  report)
+
 
 
 def main():
