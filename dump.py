@@ -50,10 +50,16 @@ def read_facs(subject, image_sequence):
 
     return np.loadtxt(facs_file_path).reshape(-1, 2)
 
-def read_peak_landmarks(subject, image_sequence):
+def read_landmarks(subject, image_sequence, landmark_idx):
     landmarks_dir = os.path.join(LANDMARKS_DIR, subject, image_sequence)
-    landmark_file_path = os.path.join(landmarks_dir, sorted(os.listdir(landmarks_dir))[-1])
+    landmark_file_path = os.path.join(landmarks_dir, sorted([f for f in os.listdir(landmarks_dir) if f.endswith('.txt')])[landmark_idx])
     return np.loadtxt(landmark_file_path)
+
+def read_peak_landmarks(subject, image_sequence):
+    return read_landmarks(subject, image_sequence, -1)
+
+def read_neutral_landmarks(subject, image_sequence):
+    return read_landmarks(subject, image_sequence, 0)
 
 def load_image(subject, image_sequence, image):
     return img.imread(os.path.join(IMAGES_DIR, subject, image_sequence, image))
@@ -90,8 +96,14 @@ def main():
 
             landmarks = read_peak_landmarks(subject, image_sequence)
             for i, (x, y) in enumerate(landmarks):
-                flat_data['landmarks'].append({'subject': subject, 'image_sequence': image_sequence, 'number': i, 'x': x, 'y': y})
+                flat_data['landmarks'].append({'subject': subject, 'image_sequence': image_sequence, 'number': i, 'x': x, 'y': y, 'emotion': emotion})
 
+            # HACK
+            if emotion == -1:
+                continue
+            landmarks = read_neutral_landmarks(subject, image_sequence)
+            for i, (x, y) in enumerate(landmarks):
+                flat_data['landmarks'].append({'subject': subject, 'image_sequence': image_sequence, 'number': i, 'x': x, 'y': y, 'emotion': 0})
 
     with open(os.path.join(DATA_DIR, 'data.json'), 'w') as outfile:
         json.dump(flat_data, outfile, indent=2)
