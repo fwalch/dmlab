@@ -1,0 +1,184 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import cluster
+from sklearn import mixture
+import copy
+
+# Load data
+npzfile = np.load('SignedLandmarkChange.npz')
+
+# Create arrays contanining the change in distance
+# for the different emotions
+
+dAnger = npzfile['anger']
+dContempt = npzfile['contempt']
+dDisgust = npzfile['disgust']
+dFear = npzfile['fear']
+dHappy = npzfile['happy']
+dSadness = npzfile['sad']
+dSurprise = npzfile['surprise']
+
+
+# Calculate mean of changes in landmarks
+LMhatAnger = np.mean(dAnger,axis=0)
+LMhatContempt = np.mean(dContempt,axis=0)
+LMhatDisgust = np.mean(dDisgust,axis=0)
+LMhatFear = np.mean(dFear,axis=0)
+LMhatHappy = np.mean(dHappy,axis=0)
+LMhatSadness = np.mean(dSadness,axis=0)
+LMhatSurprise = np.mean(dSurprise,axis=0)
+
+# Used for plotting (as the x-axis)
+LM = np.arange(0,68)
+
+#---- Cluster anaylsis: K-Means -------
+# number of clusters
+n_Clusters = 4
+
+# Cluster the Anger data:
+ClustersAnger = cluster.k_means(np.transpose(dAnger),n_Clusters)
+# colorAnger converts the cluster label output from a number to a color
+# for plottign purposes
+colorAnger = list(copy.deepcopy(ClustersAnger[1])) 
+
+# Cluster the Contempt data:
+ClustersContempt = cluster.k_means(np.transpose(dContempt),n_Clusters)
+colorContempt = list(copy.deepcopy(ClustersContempt[1]))
+
+# Cluster the Disgust data:
+ClustersDisgust = cluster.k_means(np.transpose(dDisgust),n_Clusters)
+colorDisgust = list(copy.deepcopy(ClustersDisgust[1]))
+
+# Cluster the Fear data:
+ClustersFear = cluster.k_means(np.transpose(dFear),n_Clusters)
+colorFear = list(copy.deepcopy(ClustersFear[1]))
+
+# Cluster the Happy data:
+ClustersHappy = cluster.k_means(np.transpose(dHappy),n_Clusters)
+colorHappy = list(copy.deepcopy(ClustersHappy[1]))
+
+# Cluster the Sadness data:
+ClustersSadness = cluster.k_means(np.transpose(dSadness),n_Clusters)
+colorSadness = list(copy.deepcopy(ClustersSadness[1]))
+
+# Cluster the Surprise data:
+ClustersSurprise = cluster.k_means(np.transpose(dSurprise),n_Clusters)
+colorSurprise = list(copy.deepcopy(ClustersSurprise[1]))
+
+
+def Colorlist(col):
+    '''Converts integers to colors in a list.
+    '''
+    for i in range(len(col)):
+        if col[i] == 0:
+            col[i] = 'b'
+        if col[i] == 1:
+            col[i] = 'r'
+        if col[i] == 2:
+            col[i] = 'g'
+        if col[i] == 3:
+            col[i] = 'c'
+        if col[i] == 4:
+            col[i] = 'm'
+        if col[i] == 5:
+            col[i] = 'y'
+        if col[i] == 6:
+            col[i] = 'k'
+    return col     
+
+
+colorAnger = Colorlist(colorAnger)
+colorContempt = Colorlist(colorContempt)
+colorDisgust = Colorlist(colorDisgust)
+colorFear = Colorlist(colorFear)
+colorHappy = Colorlist(colorHappy)
+colorSadness = Colorlist(colorSadness)
+colorSurprise = Colorlist(colorSurprise)
+
+# Vizualize:
+MarkerSize = 40
+
+plt.figure(figsize=(12, 6))
+plt.scatter(LM, LMhatAnger, c=colorAnger,s=MarkerSize)
+plt.title("Emotion: Anger")
+plt.xlabel('Landmark')
+plt.ylabel('Change in landmark position')
+plt.grid()
+plt.savefig('AngerClusters.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None) 
+plt.show()
+  
+
+plt.figure(figsize=(12, 6))
+plt.scatter(LM, LMhatContempt, c=colorContempt,s=MarkerSize)
+plt.title("Emotion: Contempt")
+plt.xlabel('Landmark')
+plt.ylabel('Change in landmark position')
+plt.grid()
+plt.savefig('ContemptClusters.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None) 
+plt.show()
+
+plt.figure(figsize=(12, 6))
+plt.scatter(LM, LMhatDisgust, c=colorDisgust,s=MarkerSize)
+plt.title("Emotion: Disgust")
+plt.xlabel('Landmark')
+plt.ylabel('Change in landmark position')
+plt.grid()
+plt.savefig('DisgustClusters.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None) 
+plt.show()
+
+plt.figure(figsize=(12, 6))
+plt.scatter(LM, LMhatFear, c=colorFear,s=MarkerSize)
+plt.title("Emotion: Fear")
+plt.xlabel('Landmark')
+plt.ylabel('Change in landmark position')
+plt.grid()
+plt.savefig('FearClusters.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None) 
+plt.show()
+
+plt.figure(figsize=(12, 6))
+plt.scatter(LM, LMhatHappy, c=colorHappy,s=MarkerSize)
+plt.title("Emotion: Happiness")
+plt.xlabel('Landmark')
+plt.ylabel('Change in landmark position')
+plt.grid()
+plt.savefig('HappyClusters.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None) 
+plt.show()
+
+plt.figure(figsize=(12, 6))
+plt.scatter(LM, LMhatSadness, c=colorSadness,s=MarkerSize)
+plt.title("Emotion: Sadness")
+plt.xlabel('Landmark')
+plt.ylabel('Change in landmark position')
+plt.grid()
+plt.savefig('FearSadness.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None) 
+plt.show()
+
+plt.figure(figsize=(12, 6))
+plt.scatter(LM, LMhatSurprise, c=colorSurprise,s=MarkerSize)
+plt.title("Emotion: Surprise")
+plt.xlabel('Landmark')
+plt.ylabel('Change in landmark position')
+plt.grid()
+plt.savefig('SurpriseClusters.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None) 
+plt.show()
