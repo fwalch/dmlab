@@ -1,0 +1,327 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+DATA_DIR = 'CK+'
+IMAGES_DIR = os.path.join(DATA_DIR, 'cohn-kanade-images')
+EMOTIONS_DIR = os.path.join(DATA_DIR, 'Emotion_labels/Emotion')
+FACS_DIR = os.path.join(DATA_DIR, 'FACS')
+LANDMARKS_DIR = os.path.join(DATA_DIR, 'Landmarks/Landmarks')
+
+UNKNOWN_EMOTION = -1
+EMOTIONS = {
+  0: 'neutral',
+  1: 'anger',
+  2: 'contempt',
+  3: 'disgust',
+  4: 'fear',
+  5: 'happiness',
+  6: 'sadness',
+  7: 'surprise',
+
+  UNKNOWN_EMOTION: 'unknown'
+}
+
+def get_subjects():
+    return sorted([subject for subject in os.listdir(IMAGES_DIR) if subject.startswith('S')])
+
+def get_image_sequences(subject):
+    return sorted([seq for seq in os.listdir(os.path.join(IMAGES_DIR, subject)) if seq.startswith('0')])
+
+def read_emotion(subject, image_sequence):
+    emotion_dir = os.path.join(EMOTIONS_DIR, subject, image_sequence)
+
+    if not os.path.isdir(emotion_dir):
+        return UNKNOWN_EMOTION
+
+    emotion_files = os.listdir(emotion_dir)
+    
+    if  len(emotion_files) == 2:
+        #print emotion_files[0]
+        emotion_files.pop(0)
+        
+    emotion_files_count = len(emotion_files)
+
+    assert emotion_files_count == 0 or emotion_files_count == 1
+
+    if emotion_files_count == 0:
+        return UNKNOWN_EMOTION
+
+    emotion_file_path = os.path.join(emotion_dir, emotion_files[0])
+    return int(np.loadtxt(emotion_file_path))
+
+def read_landmarks(subject, image_sequence, landmark_idx):
+    landmarks_dir = os.path.join(LANDMARKS_DIR, subject, image_sequence)
+    landmark_file_path = os.path.join(landmarks_dir, sorted([f for f in os.listdir(landmarks_dir) if f.endswith('.txt')])[landmark_idx])
+    return np.loadtxt(landmark_file_path,unpack=True)
+
+def read_peak_landmarks(subject, image_sequence):
+    return read_landmarks(subject, image_sequence, -1)
+
+def read_neutral_landmarks(subject, image_sequence):
+    return read_landmarks(subject, image_sequence, 0)
+
+
+def compute_2D_euclidean_dist(X1, Y1, X2, Y2):
+    distTot = []
+    i = 0
+    for l in X1:
+                x1 = X1[i]
+                y1 = Y1[i]
+
+                x2 = X2[i]
+                y2 = Y2[i]
+
+                a = np.array((x1,y1))
+                b = np.array((x2,y2))
+
+                dist = np.linalg.norm(a-b) #compute euclidean distance 68x1 matrix
+                if y1 > y2:
+                    dist = -dist
+                distTot.append(dist)
+                i= i+1
+
+    return distTot
+
+def f(x):
+    return {
+        1: 'a',
+        'b': 2,
+    }[x]
+
+def main():
+    """ Plot all emotions and landmarks """
+    colors = {
+        0: 'w',
+        1: 'g',
+        2: 'r',
+        3: 'c',
+        4: 'm',
+        5: 'y',
+        6: 'k',
+        7: 'b',
+        UNKNOWN_EMOTION: '0.1'
+    }
+
+    plot_data = { emotion: ([], []) for emotion in EMOTIONS }
+
+    datasetX = []
+    datasetY = []
+    
+
+
+    subjects = get_subjects()
+    for subject in subjects:
+        image_sequences = get_image_sequences(subject)
+
+        for image_sequence in image_sequences:
+            emotion = read_emotion(subject, image_sequence)
+       
+            X1, Y1 = read_neutral_landmarks(subject, image_sequence)
+            X2, Y2 = read_peak_landmarks(subject, image_sequence)
+
+            distTot = compute_2D_euclidean_dist(X1, Y1, X2, Y2)
+
+
+            #print distTot
+            datasetX.append(distTot)
+            datasetY.append(emotion)
+
+    #print len(datasetY)
+    #print len(datasetX)
+    #print(datasetX[0])
+    rows1 = [i for i in range(0,len(datasetY)) if datasetY[i]==1]
+    rows2 = [i for i in range(0,len(datasetY)) if datasetY[i]==2]
+    rows3 = [i for i in range(0,len(datasetY)) if datasetY[i]==3]
+    rows4 = [i for i in range(0,len(datasetY)) if datasetY[i]==4]
+    rows5 = [i for i in range(0,len(datasetY)) if datasetY[i]==5]
+    rows6 = [i for i in range(0,len(datasetY)) if datasetY[i]==6]
+    rows7 = [i for i in range(0,len(datasetY)) if datasetY[i]==7]
+    
+    
+    DistAnger = []
+    DistContempt = []
+    DistDisgust = []
+    DistFear = []
+    DistHappy = []
+    DistSadness = []
+    DistSurprise = []
+    
+    for i in rows1: 
+        DistAnger.append(datasetX[i])
+    
+    for i in rows2: 
+        DistContempt.append(datasetX[i])    
+    
+    for i in rows3: 
+        DistDisgust.append(datasetX[i])    
+
+    for i in rows4: 
+        DistFear.append(datasetX[i])        
+    
+    for i in rows5: 
+        DistHappy.append(datasetX[i])    
+
+    for i in rows6: 
+        DistSadness.append(datasetX[i])    
+       
+    for i in rows7: 
+        DistSurprise.append(datasetX[i])    
+    
+    
+    dAnger = np.array(DistAnger)
+    dContempt = np.array(DistContempt)
+    dDisgust = np.array(DistDisgust)
+    dFear = np.array(DistFear)
+    dHappy = np.array(DistHappy)
+    dSadness = np.array(DistSadness)
+    dSurprise = np.array(DistSurprise)
+    
+    
+    np.savez('SignedLandmarkChange', anger=dAnger, contempt=dContempt,disgust=dDisgust,fear=dFear,happy=dHappy,sad=dSadness,surprise=dSurprise)
+  
+    LMhatAnger = np.mean(dAnger,axis=0)
+    LMhatContempt = np.mean(dContempt,axis=0)
+    LMhatDisgust = np.mean(dDisgust,axis=0)
+    LMhatFear = np.mean(dFear,axis=0)
+    LMhatHappy = np.mean(dHappy,axis=0)
+    LMhatSadness = np.mean(dSadness,axis=0)
+    LMhatSurprise = np.mean(dSurprise,axis=0)
+  
+    LMstdAnger = np.std(dAnger,axis=0)
+    LMstdContempt = np.std(dContempt,axis=0)
+    LMstdDisgust = np.std(dDisgust,axis=0)
+    LMstdFear = np.std(dFear,axis=0)
+    LMstdHappy = np.std(dHappy,axis=0)
+    LMstdSadness = np.std(dSadness,axis=0)
+    LMstdSurprise = np.std(dSurprise,axis=0)  
+  
+    LM = np.arange(0,68)
+    ylower = -40
+    yupper = 60
+    
+    plt.figure(figsize=(12, 6))
+    plt.errorbar(LM,LMhatAnger, LMstdAnger, linestyle='None', marker='o',color='blue',ecolor='red',capsize=4, elinewidth=2)
+    plt.title("Emotion: Angry")
+    plt.xlabel('Landmark')
+    plt.ylabel('Change in landmark position')
+    plt.ylim((ylower,yupper))    
+    plt.savefig('AngryChange.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None)
+    plt.show()  
+     
+    
+  
+    plt.figure(figsize=(12, 6))
+    plt.errorbar(LM,LMhatContempt, LMstdContempt, linestyle='None', marker='o',color='blue',ecolor='red',capsize=4, elinewidth=2)
+    plt.title("Emotion: Contempt")
+    plt.xlabel('Landmark')
+    plt.ylabel('Change in landmark position')
+    plt.ylim((ylower,yupper))    
+    plt.savefig('ContemptChange.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None)    
+    plt.show()     
+    
+    
+    plt.figure(figsize=(12, 6))
+    plt.errorbar(LM,LMhatDisgust, LMstdDisgust, linestyle='None', marker='o',color='blue',ecolor='red',capsize=4, elinewidth=2)
+    plt.title("Emotion: Disgust")
+    plt.xlabel('Landmark')
+    plt.ylabel('Change in landmark position')
+    plt.ylim((ylower,yupper))    
+    plt.savefig('DisgustChange.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None)    
+    plt.show()      
+    
+    
+    plt.figure(figsize=(12, 6))
+    plt.errorbar(LM,LMhatFear, LMstdFear, linestyle='None', marker='o',color='blue',ecolor='red',capsize=4, elinewidth=2)
+    plt.title("Emotion: Fear")
+    plt.xlabel('Landmark')
+    plt.ylabel('Change in landmark position')
+    plt.ylim((ylower,yupper))    
+    plt.savefig('FearChange.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None)    
+    plt.show()      
+    
+    plt.figure(figsize=(12, 6))
+    plt.errorbar(LM,LMhatHappy, LMstdHappy, linestyle='None', marker='o',color='blue',ecolor='red',capsize=4, elinewidth=2)
+    plt.title("Emotion: Happy")
+    plt.xlabel('Landmark')
+    plt.ylabel('Change in landmark position')
+    plt.ylim((ylower,yupper))    
+    plt.savefig('HappyChange.png', dpi=None, facecolor='w', edgecolor='w',
+             orientation='portrait', papertype=None, format=None,
+             transparent=False, bbox_inches=None, pad_inches=0.1,
+             frameon=None)    
+    plt.show()      
+    
+    plt.figure(figsize=(12, 6))
+    plt.errorbar(LM,LMhatSadness, LMstdSadness, linestyle='None', marker='o',color='blue',ecolor='red',capsize=4, elinewidth=2)
+    plt.title("Emotion: Sadness")
+    plt.xlabel('Landmark')
+    plt.ylabel('Change in landmark position')
+    plt.ylim((ylower,yupper))    
+    plt.savefig('SadnessChange.png', dpi=None, facecolor='w', edgecolor='w',
+             orientation='portrait', papertype=None, format=None,
+             transparent=False, bbox_inches=None, pad_inches=0.1,
+             frameon=None)    
+    plt.show()      
+   
+    
+    plt.figure(figsize=(12, 6))
+    plt.errorbar(LM,LMhatSurprise, LMstdSurprise, linestyle='None', marker='o',color='blue',ecolor='red',capsize=4, elinewidth=2)
+    plt.title("Emotion: Surprise")
+    plt.xlabel('Landmark')
+    plt.ylabel('Change in landmark position')
+    plt.ylim((ylower,yupper))    
+    plt.savefig('SurpriseChange.png', dpi=None, facecolor='w', edgecolor='w',
+            orientation='portrait', papertype=None, format=None,
+            transparent=False, bbox_inches=None, pad_inches=0.1,
+            frameon=None)    
+    plt.show()     
+
+# 1=anger, 2=contempt, 3=disgust, 4=fear, 5=happy, 6=sadness, 7=surprise
+
+
+
+    #print f(1)
+    #print len(datasetX),len(dd[0]), dd[0]
+
+    #print datasetX[0]
+    #print datasetX[0][0]
+    #print datasetX[1]
+    #print datasetX[1][0]
+    #print datasetX[:][0]
+    '''
+            plot_data[emotion][0].append(X)
+            plot_data[emotion][1].append(Y)
+
+    for emotion in EMOTIONS:
+        if emotion == UNKNOWN_EMOTION or len(plot_data[emotion][0]) == 0:
+            continue
+
+        X = np.concatenate(plot_data[emotion][0])
+        Y = np.concatenate(plot_data[emotion][1])
+
+        print EMOTIONS[emotion]
+        plt.scatter(X, Y, color=colors[emotion], alpha=0.5, s=20, lw=0, label=EMOTIONS[emotion])
+
+    plt.xlabel('X pixel position of landmark.')
+    plt.ylabel('Y pixel position of landmark.')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+'''
+
+if __name__ == '__main__':
+    main()
