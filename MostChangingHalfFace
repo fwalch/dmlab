@@ -1,0 +1,359 @@
+
+# coding: utf-8
+
+## - Load and Prepare Data-
+
+# In[1]:
+
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import numpy as np
+from sklearn import cluster
+from sklearn import mixture
+import copy
+import matplotlib.gridspec as gridspec
+from sklearn import cross_validation, metrics
+from __future__ import division
+
+DATA_DIR = 'CK+'
+IMAGES_DIR = os.path.join(DATA_DIR, 'cohn-kanade-images')
+EMOTIONS_DIR = os.path.join(DATA_DIR, 'Emotion_labels/Emotion')
+FACS_DIR = os.path.join(DATA_DIR, 'FACS')
+LANDMARKS_DIR = os.path.join(DATA_DIR, 'Landmarks/Landmarks')
+
+
+# In[2]:
+
+UNKNOWN_EMOTION = -1
+EMOTIONS = {
+  0: 'neutral',
+  1: 'anger',
+  2: 'contempt',
+  3: 'disgust',
+  4: 'fear',
+  5: 'happiness',
+  6: 'sadness',
+  7: 'surprise',
+
+  UNKNOWN_EMOTION: 'unknown'
+}
+
+
+# In[3]:
+
+def get_subjects():
+    return sorted([subject for subject in os.listdir(IMAGES_DIR) if subject.startswith('S')])
+
+def get_image_sequences(subject):
+    return sorted([seq for seq in os.listdir(os.path.join(IMAGES_DIR, subject)) if seq.startswith('0')])
+
+def read_emotion(subject, image_sequence):
+    emotion_dir = os.path.join(EMOTIONS_DIR, subject, image_sequence)
+
+    if not os.path.isdir(emotion_dir):
+        return UNKNOWN_EMOTION
+
+    emotion_files = os.listdir(emotion_dir)
+    
+    if  len(emotion_files) == 2:
+        #print emotion_files[0]
+        emotion_files.pop(0)
+        
+    emotion_files_count = len(emotion_files)
+
+    assert emotion_files_count == 0 or emotion_files_count == 1
+
+    if emotion_files_count == 0:
+        return UNKNOWN_EMOTION
+
+    emotion_file_path = os.path.join(emotion_dir, emotion_files[0])
+    return int(np.loadtxt(emotion_file_path))
+
+def read_landmarks(subject, image_sequence, landmark_idx):
+    landmarks_dir = os.path.join(LANDMARKS_DIR, subject, image_sequence)
+    landmark_file_path = os.path.join(landmarks_dir, sorted([f for f in os.listdir(landmarks_dir) if f.endswith('.txt')])[landmark_idx])
+    return np.loadtxt(landmark_file_path,unpack=True)
+
+def read_peak_landmarks(subject, image_sequence):
+    return read_landmarks(subject, image_sequence, -1)
+
+def read_neutral_landmarks(subject, image_sequence):
+    return read_landmarks(subject, image_sequence, 0)
+
+
+def compute_2D_euclidean_dist(X1, Y1, X2, Y2):
+    distTot = []
+    i = 0
+    for l in X1:
+                x1 = X1[i]
+                y1 = Y1[i]
+
+                x2 = X2[i]
+                y2 = Y2[i]
+
+                a = np.array((x1,y1))
+                b = np.array((x2,y2))
+
+                dist = np.linalg.norm(a-b) #compute euclidean distance 68x1 matrix
+                if y1 > y2:
+                    dist = -dist
+                distTot.append(dist)
+                i= i+1
+
+    return distTot
+
+def f(x):
+    return {
+        1: 'a',
+        'b': 2,
+    }[x]
+
+
+### Feature extraxtion - change in landmark position:
+
+# In[4]:
+
+XposPeak = []
+YposPeak = []
+XposNeut = []
+YposNeut = []
+Emolabel = []
+distTot = []
+    
+subjects = get_subjects()
+for subject in subjects:
+    image_sequences = get_image_sequences(subject)
+
+    for image_sequence in image_sequences:
+        emotion = read_emotion(subject, image_sequence)
+       
+        X1, Y1 = read_neutral_landmarks(subject, image_sequence)
+        X2, Y2 = read_peak_landmarks(subject, image_sequence)
+
+        dist = compute_2D_euclidean_dist(X1, Y1, X2, Y2)
+        distTot.append(dist)
+        XposPeak.append(X2)
+        YposPeak.append(Y2)
+        XposNeut.append(X1)
+        YposNeut.append(Y1)
+        Emolabel.append(emotion)
+
+# Convert to numpy arrays:        
+xPosNeut = np.array(XposNeut)
+yPosNeut = np.array(YposNeut)
+xPosPeak = np.array(XposPeak)
+yPosPeak = np.array(YposPeak)
+eucdist = np.array(distTot)
+xdist = xPosPeak-xPosNeut
+ydist = yPosPeak-yPosNeut
+emolabel = np.array(Emolabel)
+
+# Mean neutral face
+xMeanNeut = np.mean(xPosNeut, axis=0)
+yMeanNeut = np.mean(yPosNeut, axis=0)
+
+
+# In[5]:
+
+# Extract data points with label
+
+labelled = [i for i in range(0,len(emolabel)) if emolabel[i]!=-1]
+xDist = xdist[labelled]
+yDist = ydist[labelled]
+EucDist = eucdist[labelled]
+EmoLabel = emolabel[labelled]
+print EucDist.shape
+print EmoLabel.shape
+
+
+### Feature reduction:
+
+#### Halfing the face:
+
+# In[6]:
+
+CenterIndex = np.array([27,28,29,30,33,51,62,66,57,8])
+PairsIndex = np.array([[21,22],[20,23],[19,24],[18,25],[17,26],[36,45],[37,44],[38,43],[39,42],[40,47],[41,46],[32,34],
+                       [31,35],[50,52],[61,63],[49,53],[60,64],[48,54],[59,55],[67,65],[58,56],[7,9],[6,10],[5,11],
+                       [4,12],[3,13],[2,14],[1,15],[0,16]])
+
+HalfFaceIndex = np.concatenate((CenterIndex,PairsIndex[:,0]))
+
+
+# In[7]:
+
+EucDistHalf = EucDist[:,HalfFaceIndex]
+xDistHalf = xDist[:,HalfFaceIndex]
+yDistHalf = yDist[:,HalfFaceIndex]
+MeanEucDistHalfFace = np.mean(EucDistHalf,axis=0)
+xMeanNeutHalf = xMeanNeut[HalfFaceIndex]
+yMeanNeutHalf = yMeanNeut[HalfFaceIndex]
+
+print xMeanNeut.shape
+print xDist.shape
+print xDistHalf.shape
+
+
+# In[8]:
+
+def RuleClf(cv,X,Y,L):
+    ''' Calculates mean of the change in the x- and y direction of the landmarks
+    in the training set for the different emotions, to create "ideal" emotions.
+    Classifies the test samples as belonging to the class to which the test vector has the
+    lowest euclidian distance.
+    Input:  cv - indexes og train/test sets
+            X - changes in landmark x-pos.
+            Y - changes in landmark y-pos.
+            L - emotion labels
+    output: Lpred - predicted labels of test set
+            Ltest - true labels of test set
+            acc - accuracy of prediction
+    '''
+    AccVec = np.zeros(len(cv))
+    k = 0
+    for trainIdx, testIdx in cv:
+        xTrain, yTrain = X[trainIdx],Y[trainIdx]
+        xTest, yTest = X[testIdx], Y[testIdx]
+        Ltrain = L[trainIdx]
+        Ltest = L[testIdx]
+        Lpred = np.zeros(len(testIdx))
+        eucDist = np.zeros(7)
+        Nlm = len(xTrain[0])
+        
+        rows1 = [i for i in range(0,len(Ltrain)) if Ltrain[i]==1]
+        rows2 = [i for i in range(0,len(Ltrain)) if Ltrain[i]==2]
+        rows3 = [i for i in range(0,len(Ltrain)) if Ltrain[i]==3]
+        rows4 = [i for i in range(0,len(Ltrain)) if Ltrain[i]==4]
+        rows5 = [i for i in range(0,len(Ltrain)) if Ltrain[i]==5]
+        rows6 = [i for i in range(0,len(Ltrain)) if Ltrain[i]==6]
+        rows7 = [i for i in range(0,len(Ltrain)) if Ltrain[i]==7]
+        
+        # Ideal Emotions:
+        IdealEmotions = np.zeros((7,2,Nlm))
+        
+        IdealEmotions[0,:,:] = np.vstack((np.mean(xTrain[rows1],axis=0), np.mean(yTrain[rows1],axis=0)))
+        IdealEmotions[1,:,:] = np.vstack((np.mean(xTrain[rows2],axis=0), np.mean(yTrain[rows2],axis=0)))
+        IdealEmotions[2,:,:] = np.vstack((np.mean(xTrain[rows3],axis=0), np.mean(yTrain[rows3],axis=0)))
+        IdealEmotions[3,:,:] = np.vstack((np.mean(xTrain[rows4],axis=0), np.mean(yTrain[rows4],axis=0)))
+        IdealEmotions[4,:,:] = np.vstack((np.mean(xTrain[rows5],axis=0), np.mean(yTrain[rows5],axis=0)))
+        IdealEmotions[5,:,:] = np.vstack((np.mean(xTrain[rows6],axis=0), np.mean(yTrain[rows6],axis=0)))
+        IdealEmotions[6,:,:] = np.vstack((np.mean(xTrain[rows7],axis=0), np.mean(yTrain[rows7],axis=0)))
+        
+        for i in range(0,len(testIdx)):
+            aa = np.array((xTest[i],yTest[i]))
+            #print i
+            for em in range(0,7):
+                #print em
+                bb = np.array((IdealEmotions[em,0,:],IdealEmotions[em,1,:]))
+                eucDist[em] = np.linalg.norm(aa-bb)
+            #print 'Euclidian Distance: '
+            #print eucDist
+                
+            sortDist = np.argsort(eucDist)
+            #print sortDist
+            Lpred[i] = sortDist[0] + 1
+            
+        diffLabels = Lpred - Ltest
+        acc = (len(diffLabels) - np.count_nonzero(diffLabels))/len(diffLabels)
+        AccVec[k] = acc
+        k = k+1
+        
+    return AccVec
+
+
+#### Remove insignificant features:
+
+# In[9]:
+
+AbsMeanEucDistHalfFace = abs(MeanEucDistHalfFace)
+sorted_index = np.argsort(AbsMeanEucDistHalfFace)
+
+
+# In[10]:
+
+ThresholdVec = [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6]
+AccuracyVec = np.zeros(len(ThresholdVec))
+
+j = 0
+for Threshold in ThresholdVec:
+    IndexAboveThreshold = sorted_index[AbsMeanEucDistHalfFace[sorted_index]>Threshold]
+    xReduced = xDistHalf[:,IndexAboveThreshold]
+    yReduced = yDistHalf[:,IndexAboveThreshold]
+
+    xNeutReduced = xMeanNeutHalf[IndexAboveThreshold]
+    yNeutReduced = yMeanNeutHalf[IndexAboveThreshold]
+
+    # Create training and test sets using Cross Validation:
+    cv = cross_validation.StratifiedKFold(EmoLabel, n_folds=7)
+    a = RuleClf(cv,xReduced,yReduced,EmoLabel)
+    AccuracyVec[j] = np.mean(a)
+    j = j+1
+    print np.mean(a)
+
+
+# In[11]:
+
+print AccuracyVec
+
+
+# In[285]:
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+
+subset = abs(EucDistHalf[abs(EucDistHalf<79)])
+numBins = 50
+ax.hist(subset,numBins)
+plt.show()
+
+
+# In[43]:
+
+Threshold = 3
+IndexAboveThreshold = sorted_index[AbsMeanEucDistHalfFace[sorted_index]>Threshold]
+EucReduced = EucDistHalf[IndexAboveThreshold]
+
+plt.figure()
+plt.scatter(xMeanNeut,yMeanNeut,color='y',s=30)
+plt.scatter(xMeanNeutHalf[IndexAboveThreshold],yMeanNeutHalf[IndexAboveThreshold],color='b',s=40)
+plt.gca().invert_yaxis()
+plt.title('Feature Reduction')
+plt.xlabel('x-pos')
+plt.ylabel('y-pos')
+plt.savefig('FeatureReduction2.png', dpi=None, facecolor='w', edgecolor='w',
+             orientation='portrait', papertype=None, format=None,
+             transparent=False, bbox_inches=None, pad_inches=0.1,
+             frameon=None)  
+plt.show()
+
+
+# In[25]:
+
+print IndexAboveThreshold
+
+
+# In[41]:
+
+plt.figure()
+plt.plot(ThresholdVec,AccuracyVec,'bo-',linewidth=3,markersize=6)
+plt.plot(ThresholdVec[3],AccuracyVec[3],'bo-',linewidth=3,markersize=9)
+plt.title('Accuracy vs. Number of Landmarks')
+plt.xlabel('Threshold')
+plt.ylabel('Accuracy')
+plt.savefig('Acc_vs_N.png', dpi=None, facecolor='w', edgecolor='w',
+             orientation='portrait', papertype=None, format=None,
+             transparent=False, bbox_inches=None, pad_inches=0.1,
+             frameon=None)
+plt.show()
+
+
+# In[20]:
+
+
+
+
+# In[ ]:
+
+
+
