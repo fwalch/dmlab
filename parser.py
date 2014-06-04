@@ -10,6 +10,7 @@ class Parser:
     __EMOTIONS_DIR = os.path.join(__DATA_DIR, 'Emotion')
     __FACS_DIR = os.path.join(__DATA_DIR, 'FACS')
     __LANDMARKS_DIR = os.path.join(__DATA_DIR, 'Landmarks')
+    __UNKNOWN_EMOTION = 8
     __EMOTIONS = {
       0: 'neutral',
       1: 'anger',
@@ -19,8 +20,12 @@ class Parser:
       5: 'happiness',
       6: 'sadness',
       7: 'surprise',
-      None: 'unknown'
+      __UNKNOWN_EMOTION: 'unknown'
     }
+
+    @classmethod
+    def is_unknown_emotion(cls, emotion):
+        return emotion == cls.__UNKNOWN_EMOTION
 
     @classmethod
     def data_dir(cls):
@@ -55,7 +60,7 @@ class Parser:
         emotion_file_path = self.__get_single_file(emotion_dir)
 
         if not emotion_file_path:
-            return None
+            return self.__UNKNOWN_EMOTION
 
         return int(np.loadtxt(emotion_file_path))
 
