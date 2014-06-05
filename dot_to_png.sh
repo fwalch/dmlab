@@ -1,6 +1,6 @@
 #!/usr/bin/env  bash
 
-for f in *.dot
+for f in data/*.dot
 do
   echo $f
   dot -Tpng $f -o ${f}.png

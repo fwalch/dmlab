@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
+from parser import Parser
 from train.json_loader import JsonLoader
 from train.landmark_features import *
 from sklearn import cross_validation, metrics, tree, ensemble
-import itertools as it
 
 class Training:
     __FOLDS = 10
@@ -21,7 +22,6 @@ class Training:
         for feature_extractor in self.feature_extractors:
 
             # Extract features
-            feature_names = feature_extractor.feature_names()
             features = feature_extractor.extract_features(peak_landmarks, neutral_landmarks)
 
             assert len(features) == len(emotions)
@@ -65,12 +65,12 @@ class Training:
             print(confusion_matrices[scores.index(max(scores))])
 
             # Export decision trees; create PNG with ./dot_to_png.sh
-            if type(self.classifier_generator()) == type(tree.DecisionTreeClassifier):
+            if type(self.classifier_generator()) == type(tree.DecisionTreeClassifier()):
+                print('Export decision tree')
                 best_classifier = classifiers[scores.index(max(scores))]
-                feature_descriptions = list('Feature {0}, {1}'.format(x, y) for x, y in it.product(range(int(features.shape[1]/2)), feature_names))
 
-                with open("{0}.dot".format(feature_extractor.__name__), 'w') as outfile:
-                    outfile = tree.export_graphviz(best_classifier, out_file=outfile, feature_names=feature_descriptions)
+                with open(os.path.join(Parser.data_dir(), '{0}.dot'.format(feature_extractor.__class__.__name__)), 'w') as outfile:
+                    outfile = tree.export_graphviz(best_classifier, out_file=outfile, feature_names=feature_extractor.feature_names())
 
 if __name__ == '__main__':
     # Classifier creation functions, used later

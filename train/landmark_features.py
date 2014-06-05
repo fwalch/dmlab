@@ -1,11 +1,23 @@
 import numpy as np
 from sklearn import preprocessing
+import itertools as it
 
 class NormalizedLandmarkDistances:
     """ Base class for features based on normalized peak/neutral landmark coordinate differences """
 
+    FEATURE_NAMES = ['Landmark {0}: normalized distance peak/neutral (x)', 'Landmark {0}: normalized distance peak/neutral (y)']
+
+    def number_of_features(self):
+        return 68
+
+    def landmark_number(self, landmark_index):
+        assert landmark_index >= 0 and landmark_index < self.number_of_features()
+
+        return landmark_index
+
     def feature_names(self):
-        return ['normalized distance peak/neutral (x)', 'normalized distance peak/neutral (y)']
+        """ Return a name for each feature, i.e. which landmark number it belongs to and if it is a difference in X or Y """
+        return list(y.format(self.landmark_number(x)) for x, y in it.product(range(self.number_of_features()), self.FEATURE_NAMES))
 
     def __normalize_landmarks(self, landmarks):
         """ Normalize for each face individually """
@@ -16,8 +28,6 @@ class NormalizedLandmarkDistances:
 
     def normalized_landmark_differences(self, peak_landmarks, neutral_landmarks):
         assert len(peak_landmarks) == len(neutral_landmarks)
-        number_of_landmarks = peak_landmarks.shape[1]
-        number_of_features = 2*number_of_landmarks # 2 features (x and y) for each landmark
 
         # Normalize landmarks
         neutral_landmarks = self.__normalize_landmarks(neutral_landmarks)
@@ -53,14 +63,22 @@ class SelectedNormalizedLandmarkDistances(NormalizedLandmarkDistances):
             assert group_name in self.__groups, '{0} is not a valid landmark group'.format(group_name)
 
         self.group_names = group_names
+        self.landmark_numbers = []
+        for group_name in self.group_names:
+            self.landmark_numbers += self.__groups[group_name]
+
+        self.landmark_numbers = list(set(self.landmark_numbers))
+
+    def landmark_number(self, landmark_index):
+        return self.landmark_numbers[landmark_index]
+
+    def number_of_features(self):
+        return len(self.landmark_numbers)
 
     def extract_features(self, peak_landmarks, neutral_landmarks):
         """ Return the distance between selected peak and neutral landmarks for x and y direction as features """
-        landmark_numbers = []
-        for group_name in self.group_names:
-            landmark_numbers += self.__groups[group_name]
 
-        return self.normalized_landmark_differences(peak_landmarks[:, landmark_numbers, :], neutral_landmarks[:, landmark_numbers, :])
+        return self.normalized_landmark_differences(peak_landmarks[:, self.landmark_numbers, :], neutral_landmarks[:, self.landmark_numbers, :])
 
     def describe(self):
         return 'Normalized X/Y peak/normal differences for landmarks out of {0}'.format(', '.join(self.group_names))
