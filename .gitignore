@@ -4,3 +4,5 @@ build/
 /*.dot
 /*.png
 __pycache__
+bin/
+obj/

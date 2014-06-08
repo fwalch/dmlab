@@ -6,17 +6,24 @@ from parser import Parser
 from train.json_loader import JsonLoader
 from train.landmark_features import *
 from sklearn import cross_validation, metrics, tree, ensemble
+from train.classifier_wrapper import ClassifierWrapper
 
 class Training:
     __FOLDS = 10
 
-    def __init__(self, feature_extractors, classifier_generator, training_repetitions):
+    def __init__(self, feature_extractors, classifier_generator, training_repetitions, debug):
         self.feature_extractors = feature_extractors
         self.classifier_generator = classifier_generator
         self.training_repetitions = training_repetitions
+        self.debug = debug
 
     def train(self):
+        # TODO refactor
         neutral_landmarks, peak_landmarks, emotions = JsonLoader.load_default()
+
+        overall_best_score = 0
+        overall_best_classifier = None
+        overall_best_feature_extractor = None
 
         # Try with different sets of extracted features
         for feature_extractor in self.feature_extractors:
@@ -54,23 +61,33 @@ class Training:
                     confusion_matrices.append(confusion_matrix)
                     classifiers.append(classifier)
 
+            best_score = max(scores)
+            best_classifier = classifiers[scores.index(best_score)]
+
+            if best_score > overall_best_score:
+                overall_best_score = best_score
+                overall_best_classifier = best_classifier
+                overall_best_feature_extractor = feature_extractor
+
             # Output results
             print()
             print('#', feature_extractor.describe())
             print('  Generated {classifiers} classifiers ({folds} folds, {repetitions} repetitions) of type {classifier_type}'.format(classifiers=self.training_repetitions*self.__FOLDS, repetitions=self.training_repetitions, classifier_type=type(self.classifier_generator()), folds=self.__FOLDS))
             print('  Prediction based on {0} features for {1} image sequences'.format(features.shape[1], features.shape[0]))
             print('  Average accuracy over all folds and repetitions:', sum(scores)/len(scores))
-            print('  Best accuracy:', max(scores))
+            print('  Best accuracy:', best_score)
             print('  Best confusion matrix:')
-            print(confusion_matrices[scores.index(max(scores))])
+            print(confusion_matrices[scores.index(best_score)])
 
             # Export decision trees; create PNG with ./dot_to_png.sh
-            if type(self.classifier_generator()) == type(tree.DecisionTreeClassifier()):
-                print('Export decision tree')
-                best_classifier = classifiers[scores.index(max(scores))]
+            if self.debug and type(self.classifier_generator()) == type(tree.DecisionTreeClassifier()):
+                filename = os.path.join(Parser.data_dir(), '{0}.dot'.format(feature_extractor.__class__.__name__))
+                print('Export decision tree to', filename)
 
-                with open(os.path.join(Parser.data_dir(), '{0}.dot'.format(feature_extractor.__class__.__name__)), 'w') as outfile:
+                with open(filename, 'w') as outfile:
                     outfile = tree.export_graphviz(best_classifier, out_file=outfile, feature_names=feature_extractor.feature_names())
+
+        return ClassifierWrapper(overall_best_feature_extractor, overall_best_classifier, overall_best_score)
 
 if __name__ == '__main__':
     # Classifier creation functions, used later
@@ -86,6 +103,8 @@ if __name__ == '__main__':
     parser.add_argument('--individual-landmarks', action='store_true', default=True)
     parser.add_argument('--repetitions', type=int, default=1, required=False)
     parser.add_argument('--classifier', choices=['random-forest', 'decision-tree'], default='random-forest')
+    parser.add_argument('--persist', action='store_true', default=False, help='Save best classifier to classifier.pkl')
+    parser.add_argument('--debug', action='store_true', default=False)
 
     args = parser.parse_args()
 
@@ -100,6 +119,14 @@ if __name__ == '__main__':
 
     if args.individual_landmarks:
         feature_extractors.append(NormalizedLandmarkDistances())
+        feature_extractors.append(SymmetricAndNormalizedLandmarkDistances())
 
     # Start training
-    Training(feature_extractors, classifier_generator, args.repetitions).train()
+    training = Training(feature_extractors, classifier_generator, args.repetitions, args.debug)
+    best_classifier = training.train()
+
+    if args.persist:
+        print('Exporting best classifier ({0}).', best_classifier.score)
+        import pickle
+        with open('classifier.pkl', 'wb') as outfile:
+            pickle.dump(best_classifier, outfile)
