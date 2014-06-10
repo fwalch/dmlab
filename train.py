@@ -22,6 +22,7 @@ class Training:
         neutral_landmarks, peak_landmarks, emotions = JsonLoader.load_default()
 
         overall_best_score = 0
+        overall_best_report = 0
         overall_best_classifier = None
         overall_best_feature_extractor = None
 
@@ -34,6 +35,7 @@ class Training:
             assert len(features) == len(emotions)
 
             scores = []
+            reports = []
             confusion_matrices = []
             classifiers = []
 
@@ -60,6 +62,7 @@ class Training:
                     scores.append(score)
                     confusion_matrices.append(confusion_matrix)
                     classifiers.append(classifier)
+                    reports.append(metrics.classification_report(y_test, classifier.predict(X_test)))
 
             best_score = max(scores)
             best_classifier = classifiers[scores.index(best_score)]
@@ -78,6 +81,8 @@ class Training:
             print('  Best accuracy:', best_score)
             print('  Best confusion matrix:')
             print(confusion_matrices[scores.index(best_score)])
+            print('  Report:')
+            print(reports[scores.index(best_score)])
 
             # Export decision trees; create PNG with ./dot_to_png.sh
             if self.debug and type(self.classifier_generator()) == type(tree.DecisionTreeClassifier()):
@@ -92,7 +97,7 @@ class Training:
 if __name__ == '__main__':
     # Classifier creation functions, used later
     def create_random_forest():
-        return ensemble.RandomForestClassifier(n_estimators=50, max_depth=5, min_samples_split=5)
+        return ensemble.RandomForestClassifier(n_estimators=50)
 
     def create_decision_tree():
         return tree.DecisionTreeClassifier()
