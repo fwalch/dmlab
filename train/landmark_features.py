@@ -100,6 +100,10 @@ class SelectedNormalizedLandmarkDistances(NormalizedLandmarkDistances):
         'reduced': [(21,22),(51,57),(48,54)]
     }
 
+    @classmethod
+    def available_groups(cls):
+        return [(group, cls.__groups[group]) for group in cls.__groups]
+
     def __init__(self, *group_names):
         for group_name in group_names:
             assert group_name in self.__groups, '{0} is not a valid landmark group'.format(group_name)

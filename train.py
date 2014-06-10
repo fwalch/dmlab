@@ -92,7 +92,7 @@ class Training:
 if __name__ == '__main__':
     # Classifier creation functions, used later
     def create_random_forest():
-        return ensemble.RandomForestClassifier(n_estimators=50)
+        return ensemble.RandomForestClassifier(n_estimators=50, max_depth=5, min_samples_split=5)
 
     def create_decision_tree():
         return tree.DecisionTreeClassifier()
@@ -100,6 +100,7 @@ if __name__ == '__main__':
     # Parse command line options
     parser = argparse.ArgumentParser(description='Train landmark-based classifiers for facial expression recognition')
     parser.add_argument('--landmark-groups', action='append', nargs='+')
+    parser.add_argument('--list-landmark-groups', action='store_true', default=False)
     parser.add_argument('--individual-landmarks', action='store_true', default=True)
     parser.add_argument('--repetitions', type=int, default=1, required=False)
     parser.add_argument('--classifier', choices=['random-forest', 'decision-tree'], default='random-forest')
@@ -108,25 +109,31 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # Decide on classifier
-    classifier_generator = create_random_forest if args.classifier == 'random-forest' else create_decision_tree
+    if args.list_landmark_groups:
+        print('Available landmark groups:')
+        for (group, features) in SelectedNormalizedLandmarkDistances.available_groups():
+            print('  {0}:\tlandmarks {1}'.format(group, ','.join(map(str, features))))
 
-    # Add different feature sets to use
-    feature_extractors = []
-    if args.landmark_groups:
-        for landmark_group in args.landmark_groups:
-            feature_extractors.append(SelectedNormalizedLandmarkDistances(*landmark_group))
+    else:
+        # Decide on classifier
+        classifier_generator = create_random_forest if args.classifier == 'random-forest' else create_decision_tree
 
-    if args.individual_landmarks:
-        feature_extractors.append(NormalizedLandmarkDistances())
-        feature_extractors.append(SymmetricAndNormalizedLandmarkDistances())
+        # Add different feature sets to use
+        feature_extractors = []
+        if args.landmark_groups:
+            for landmark_group in args.landmark_groups:
+                feature_extractors.append(SelectedNormalizedLandmarkDistances(*landmark_group))
 
-    # Start training
-    training = Training(feature_extractors, classifier_generator, args.repetitions, args.debug)
-    best_classifier = training.train()
+        if args.individual_landmarks:
+            feature_extractors.append(NormalizedLandmarkDistances())
+            feature_extractors.append(SymmetricAndNormalizedLandmarkDistances())
 
-    if args.persist:
-        print('Exporting best classifier ({0}).', best_classifier.score)
-        import pickle
-        with open('classifier.pkl', 'wb') as outfile:
-            pickle.dump(best_classifier, outfile)
+        # Start training
+        training = Training(feature_extractors, classifier_generator, args.repetitions, args.debug)
+        best_classifier = training.train()
+
+        if args.persist:
+            print('Exporting best classifier ({0}).', best_classifier.score)
+            import pickle
+            with open('classifier.pkl', 'wb') as outfile:
+                pickle.dump(best_classifier, outfile)
