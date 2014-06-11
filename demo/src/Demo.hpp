@@ -15,9 +15,10 @@ class Demo
     EmotionPredictor emotionPredictor;
 
     enum class State : size_t {
-      WaitingForCommands = 0,
+      WaitingForNeutral = 0,
       ExtractNeutralLandmarks = 1,
-      ExtractPeakLandmarks = 2,
+      WaitingForPeak = 2,
+      ExtractPeakLandmarks = 3,
       PredictEmotion = 4,
       PredictionFinished = 5
     };
@@ -35,31 +36,30 @@ class Demo
       reset();
     }
 
-    bool changeState(State nextState, std::string& window)
+    void changeState(State nextState, std::string& window)
     {
       window = OutputWindows[static_cast<size_t>(currentState)/2];
       currentState = nextState;
-      return true;
     }
 
-    bool keepState(std::string& window)
+    void keepState(std::string& window)
     {
       window = OutputWindows[static_cast<size_t>(currentState)/2];
-      return currentState != State::PredictionFinished;
     }
 
-    bool process(cv::Mat& image, std::string& window)
+    void process(cv::Mat& image, std::string& window)
     {
       switch (currentState) {
-        case State::WaitingForCommands:
+        case State::WaitingForNeutral:
+        case State::WaitingForPeak:
         case State::PredictionFinished:
           // Do nothing
           break;
 
         case State::ExtractNeutralLandmarks:
           if (neutralLandmarkExtractor.process(image)) {
-            std::cout << "Switching to peak expression landmark extraction." << std::endl;
-            return changeState(State::ExtractPeakLandmarks, window);
+            std::cout << "Finished; waiting for command to extract peak expression landmarks." << std::endl;
+            return changeState(State::WaitingForPeak, window);
           }
           break;
 
@@ -85,17 +85,23 @@ class Demo
 
     void start()
     {
-      if (currentState != State::WaitingForCommands) {
+      if (currentState != State::WaitingForNeutral && currentState != State::WaitingForPeak) {
         return;
       }
 
-      std::cout << "Switching to neutral expression landmark extraction." << std::endl;
-      currentState = State::ExtractNeutralLandmarks;
+      if (currentState == State::WaitingForNeutral) {
+        std::cout << "Switching to neutral expression landmark extraction." << std::endl;
+        currentState = State::ExtractNeutralLandmarks;
+      }
+      if (currentState == State::WaitingForPeak) {
+        std::cout << "Switching to peak expression landmark extraction." << std::endl;
+        currentState = State::ExtractPeakLandmarks;
+      }
     }
 
     void reset()
     {
-      currentState = State::WaitingForCommands;
+      currentState = State::WaitingForNeutral;
       neutralLandmarkExtractor.reset();
       peakLandmarkExtractor.reset();
     }

@@ -38,9 +38,8 @@ int main(int argc, char** argv)
     camera >> image;
 
     std::string window;
-    if (demo.process(image, window)) {
-      cv::imshow(window, image);
-    }
+    demo.process(image, window);
+    cv::imshow(window, image);
 
     int pressedKey = cv::waitKey(1) & 0xFF;
     switch (pressedKey) {

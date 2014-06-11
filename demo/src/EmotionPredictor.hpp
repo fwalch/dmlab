@@ -13,7 +13,7 @@ class EmotionPredictor
     void process(cv::Mat& image, const cv::Mat& neutralLandmarks, const cv::Mat& peakLandmarks) const
     {
       std::string emotion = wrapper.getEmotion(neutralLandmarks, peakLandmarks);
-      //TODO: replace image with smiley
+      //TODO: replace detected face with smiley
       cv::putText(image, emotion, cv::Point(image.rows/2, image.cols/2), cv::FONT_HERSHEY_DUPLEX, 1, CV_RGB(255, 0, 0));
     }
 };

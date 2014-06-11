@@ -1,8 +1,6 @@
 /data/
 /.ipynb_checkpoints/
-build/
 /*.dot
 /*.png
 __pycache__
-bin/
-obj/
+build
