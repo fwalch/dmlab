@@ -109,7 +109,6 @@ if __name__ == '__main__':
     parser.add_argument('--individual-landmarks', action='store_true', default=True)
     parser.add_argument('--repetitions', type=int, default=1, required=False)
     parser.add_argument('--classifier', choices=['random-forest', 'decision-tree'], default='random-forest')
-    parser.add_argument('--persist', action='store_true', default=False, help='Save best classifier to classifier.pkl')
     parser.add_argument('--debug', action='store_true', default=False)
 
     args = parser.parse_args()
@@ -136,9 +135,3 @@ if __name__ == '__main__':
         # Start training
         training = Training(feature_extractors, classifier_generator, args.repetitions, args.debug)
         best_classifier = training.train()
-
-        if args.persist:
-            print('Exporting best classifier ({0}).', best_classifier.score)
-            import pickle
-            with open('classifier.pkl', 'wb') as outfile:
-                pickle.dump(best_classifier, outfile)

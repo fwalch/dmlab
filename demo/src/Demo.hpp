@@ -52,7 +52,6 @@ class Demo
       switch (currentState) {
         case State::WaitingForNeutral:
         case State::WaitingForPeak:
-        case State::PredictionFinished:
           // Do nothing
           break;
 
@@ -78,6 +77,12 @@ class Demo
           );
           std::cout << "Prediction finished." << std::endl;
           return changeState(State::PredictionFinished, window);
+
+        case State::PredictionFinished:
+          cv::Mat landmarks;
+          neutralLandmarkExtractor.extractLandmarks(image, landmarks);
+          emotionPredictor.drawEmotion(image, landmarks);
+          break;
       }
 
       return keepState(window);
@@ -104,6 +109,7 @@ class Demo
       currentState = State::WaitingForNeutral;
       neutralLandmarkExtractor.reset();
       peakLandmarkExtractor.reset();
+      emotionPredictor.reset();
     }
 };
 

@@ -1,5 +1,7 @@
 # Emotion Prediction demo
 
+Emoticons from https://github.com/rockerhieu/emojicon.
+
 ## Requirements
 
 * cmake

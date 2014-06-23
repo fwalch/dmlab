@@ -19,7 +19,7 @@ purge: clean
 	rm -rf $(CMAKE_DIR)
 
 demo: release
-	cd bin && ./demo
+	cd bin && ./camera-demo
 
 help:
 	@echo "Usage: make <target>"

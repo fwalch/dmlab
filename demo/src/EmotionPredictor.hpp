@@ -2,19 +2,30 @@
 #define _EmotionPredictor_H_
 
 #include <opencv2/core/core.hpp>
-#include "PythonWrapper.hpp"
+#include "PeakNeutralPythonWrapper.hpp"
+#include "EmotionVisualizer.hpp"
 
 class EmotionPredictor
 {
   private:
-    PythonWrapper wrapper;
+    PeakNeutralPythonWrapper wrapper;
+    EmotionVisualizer visualizer;
+    std::string emotion;
 
   public:
-    void process(cv::Mat& image, const cv::Mat& neutralLandmarks, const cv::Mat& peakLandmarks) const
+    void process(const cv::Mat& image, const cv::Mat& neutralLandmarks, const cv::Mat& peakLandmarks)
     {
-      std::string emotion = wrapper.getEmotion(neutralLandmarks, peakLandmarks);
-      //TODO: replace detected face with smiley
-      cv::putText(image, emotion, cv::Point(image.rows/2, image.cols/2), cv::FONT_HERSHEY_DUPLEX, 1, CV_RGB(255, 0, 0));
+      emotion = wrapper.getEmotion(neutralLandmarks, peakLandmarks);
+    }
+
+    void drawEmotion(cv::Mat& image, const cv::Mat& landmarks)
+    {
+      visualizer.drawEmotionAndSmilie(image, emotion, landmarks);
+    }
+
+    void reset()
+    {
+      emotion = "";
     }
 };
 

@@ -22,10 +22,16 @@ class Parser:
       7: 'surprise',
       __UNKNOWN_EMOTION: 'unknown'
     }
+    __INVERSE_EMOTIONS = {v:k for k, v in __EMOTIONS.items()}
 
     @classmethod
     def is_unknown_emotion(cls, emotion):
         return emotion == cls.__UNKNOWN_EMOTION
+
+    @classmethod
+    def is_emotion(cls, emotion, filter_emotion_str):
+        assert filter_emotion_str in cls.__INVERSE_EMOTIONS
+        return emotion == cls.__INVERSE_EMOTIONS[filter_emotion_str]
 
     @classmethod
     def data_dir(cls):
@@ -85,18 +91,19 @@ class Parser:
         return self.__get_landmarks(subject, image_sequence, 0)
 
     def __get_image_data(self, subject, image_sequence, image):
-        return img.imget(os.path.join(self.__IMAGES_DIR, subject, image_sequence, image))
+        return img.imread(os.path.join(self.__IMAGES_DIR, subject, image_sequence, image))
 
     def get_images(self, subject, image_sequence, append_image_data=False):
         images = []
-        for image in os.listdir(os.path.join(IMAGES_DIR, subject, image_sequence)):
+        for image in os.listdir(os.path.join(self.__IMAGES_DIR, subject, image_sequence)):
             if not image.endswith('.png'):
                 continue
 
             if append_image_data:
                 images.append({'name': image, 'data': self.__get_image_data(subject, image_sequence, image)})
+            else:
+                images.append({'name': image})
 
-            images.append({'name': image})
         return images
 
     def process_data(self, callback):

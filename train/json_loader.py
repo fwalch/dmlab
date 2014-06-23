@@ -24,7 +24,7 @@ class JsonLoader:
         with open(self.json_path, 'w') as outfile:
             json.dump({'neutral_landmarks': neutral_lm, 'peak_landmarks': peak_lm, 'emotions': emotions}, outfile, indent=2)
 
-    def load(self, only_labeled=True):
+    def load(self, *, only_labeled=True, without_emotion=None):
         if not os.path.isfile(self.json_path):
             self.dump_json()
 
@@ -41,6 +41,17 @@ class JsonLoader:
             peak_landmarks = peak_landmarks[labeled]
             emotions = emotions[labeled]
 
+        if without_emotion != None:
+            for e in without_emotion:
+                labeled = np.logical_not(self.parser.is_emotion(emotions, e))
+                print('Filtering out {0} emotions ({1}).'.format(
+                    np.logical_not(labeled).astype(int).sum(),
+                    e
+                ))
+                neutral_landmarks = neutral_landmarks[labeled]
+                peak_landmarks = peak_landmarks[labeled]
+                emotions = emotions[labeled]
+
         assert len(neutral_landmarks) == len(peak_landmarks)
         assert len(neutral_landmarks) == len(emotions)
 
@@ -51,3 +62,9 @@ class JsonLoader:
     @classmethod
     def load_default(cls):
         return cls().load()
+
+    @classmethod
+    def load_without(cls, emotion):
+        if emotion == None:
+            return cls.load_default()
+        return cls().load(without_emotion=emotion)

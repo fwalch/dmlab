@@ -49,14 +49,17 @@ endif ()
 ## Sources
 include_directories(${PYTHON_INCLUDE_DIRS} ${STASM_INCLUDE_DIRS})
 
-add_executable(demo
-  src/demo.cpp
-)
-add_dependencies(demo Stasm)
+set(executables camera-demo image-demo)
 
-target_link_libraries(demo
-  ${OpenCV_LIBRARIES}
-  ${PYTHON_LIBRARIES}
-  ${STASM_LIBRARIES}
-)
+foreach (executable ${executables})
+  add_executable(${executable}
+    src/${executable}.cpp
+  )
+  add_dependencies(${executable} Stasm)
 
+  target_link_libraries(${executable}
+    ${OpenCV_LIBRARIES}
+    ${PYTHON_LIBRARIES}
+    ${STASM_LIBRARIES}
+  )
+endforeach()
